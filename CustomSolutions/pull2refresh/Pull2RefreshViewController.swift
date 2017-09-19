@@ -27,7 +27,9 @@ class Pull2RefreshViewController: UIViewController {
     // MARK: User actions
     
     func handlePullToRefresh(_ sender: CustomRefreshControl) {
-        print("pulled to refresh")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: { [weak self] in
+            self?.refreshControl.dataSourceFinishedLoading()
+        })
     }
     
     // MARK: Private

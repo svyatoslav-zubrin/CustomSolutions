@@ -21,6 +21,19 @@ class CustomRefreshControl: UIControl {
     
     private enum RefreshState {
         case pulling, normal, loading
+        
+        var string: String {
+            switch self {
+            case .pulling: return "pulling"
+            case .normal: return "normal"
+            case .loading: return "loading"
+            }
+        }
+    }
+    private var refreshState: RefreshState = .normal {
+        didSet {
+            print("state set to: \(refreshState.string)")
+        }
     }
     
     static let minOffsetToTriggerRefresh: CGFloat = 80;
@@ -52,12 +65,20 @@ class CustomRefreshControl: UIControl {
     
     func containingScrollViewDidScroll(_ scrollView: UIScrollView) {
         currentValue = Float(scrollView.contentOffset.y)
-        print(currentValue)
+        
+        if currentValue < 0 && refreshState != .pulling {
+            refreshState = .pulling
+        }
     }
     
     func containingScrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if scrollView.contentOffset.y <= -CustomRefreshControl.minOffsetToTriggerRefresh {
+            refreshState = .loading
             sendActions(for: .valueChanged)
         }
+    }
+    
+    func dataSourceFinishedLoading() {
+        refreshState = .normal
     }
 }
