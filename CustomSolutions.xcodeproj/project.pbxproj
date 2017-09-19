@@ -131,6 +131,7 @@
 				TargetAttributes = {
 					F9A413DB1F70FE9700AED629 = {
 						CreatedOnToolsVersion = 8.3.3;
+						DevelopmentTeam = R4Q4948VQ7;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -298,7 +299,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = R4Q4948VQ7;
 				INFOPLIST_FILE = CustomSolutions/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = ua.home.zubrin.CustomSolutions;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -310,7 +313,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				DEVELOPMENT_TEAM = R4Q4948VQ7;
 				INFOPLIST_FILE = CustomSolutions/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = ua.home.zubrin.CustomSolutions;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -337,6 +342,7 @@
 				F9A413F01F70FE9700AED629 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

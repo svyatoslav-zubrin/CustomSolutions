@@ -8,16 +8,25 @@
 
 import UIKit
 
+/*
+    - track states
+    - animated switching between states
+    - interrupt scrolling programmatically
+    - add artificial shift at loading state
+    - add one more public method to force switching state from loading to normal after data source finished loading of data
+    - ...
+ */
+
 class CustomRefreshControl: UIControl {
+    
+    private enum RefreshState {
+        case pulling, normal, loading
+    }
     
     static let minOffsetToTriggerRefresh: CGFloat = 80;
     
-    var cycleLength: Float = 30 {
-        didSet { setNeedsDisplay() }
-    }
-    var currentValue: Float = 0 {
-        didSet { setNeedsDisplay() }
-    }
+    var cycleLength: Float = 30 { didSet { setNeedsDisplay() }}
+    var currentValue: Float = 0 { didSet { setNeedsDisplay() }}
     
     // MARK: Lifecycle
     
