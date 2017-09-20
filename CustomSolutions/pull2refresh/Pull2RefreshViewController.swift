@@ -16,12 +16,21 @@ class Pull2RefreshViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
+        scrollView.clipsToBounds = false
         scrollView.alwaysBounceVertical = true
         scrollView.contentSize = CGSize(width: scrollView.bounds.size.width,
                                         height: 2.0 * scrollView.bounds.size.height)
-        
+
         setupRefreshControl()
+        print("view did load")
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        print("view did appear")
+        refreshControl.calibrate() // TODO: should be called only once!!!
     }
     
     // MARK: User actions
@@ -36,6 +45,7 @@ class Pull2RefreshViewController: UIViewController {
     
     private func setupRefreshControl() {
         refreshControl.backgroundColor = UIColor.yellow
+        refreshControl.owner = scrollView
         
         refreshControl.addTarget(self, action: #selector(handlePullToRefresh(_:)), for: .valueChanged)
         
@@ -67,8 +77,12 @@ extension Pull2RefreshViewController: UIScrollViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         refreshControl.containingScrollViewDidScroll(scrollView)
     }
-    
+
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         refreshControl.containingScrollViewDidEndDragging(scrollView, willDecelerate: decelerate)
+    }
+
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        refreshControl.containingScrollViewDidEndDecelerating(scrollView)
     }
 }
