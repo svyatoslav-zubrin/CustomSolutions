@@ -1,0 +1,30 @@
+Polinom
+
+https://arachnoid.com/polysolve/
+
+0 0
+30 30
+80 60
+100 80
+110 85
+120 90
+150 100
+200 100
+250 100
+
+
+Mode: normal x,y analysis
+Polynomial degree 4, 9 x,y data pairs.
+Correlation coefficient (r^2) = 0.9936502734537594
+Standard error = 3.0118163827166367
+Coefficient output form: simple list:
+
+   1.3737447856830951e+000
+   7.6879472420430739e-001
+   2.8697969370004082e-003
+  -3.5206414956983544e-005
+   7.0853953049069964e-008
+
+Copyright (c) 2013, P. Lutus -- http://arachnoid.com. All Rights Reserved.
+
+After x=169 we'll have to use y=100
