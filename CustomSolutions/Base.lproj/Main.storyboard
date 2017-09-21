@@ -153,16 +153,16 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <view clipsSubviews="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Hh8-Cm-wfw" customClass="UniversalRefreshControl" customModule="CustomSolutions" customModuleProvider="target">
-                                <rect key="frame" x="30" y="94" width="315" height="543"/>
+                                <rect key="frame" x="0.0" y="64" width="375" height="603"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                             </view>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                         <constraints>
-                            <constraint firstAttribute="trailing" secondItem="Hh8-Cm-wfw" secondAttribute="trailing" constant="30" id="XPI-aD-Vzl"/>
-                            <constraint firstItem="Hh8-Cm-wfw" firstAttribute="top" secondItem="ij5-Ec-OgL" secondAttribute="bottom" constant="30" id="bs6-wg-lsJ"/>
-                            <constraint firstItem="vGq-i4-xQz" firstAttribute="top" secondItem="Hh8-Cm-wfw" secondAttribute="bottom" constant="30" id="f2x-VE-So0"/>
-                            <constraint firstItem="Hh8-Cm-wfw" firstAttribute="leading" secondItem="PrG-Td-VFe" secondAttribute="leading" constant="30" id="iBu-MG-NRX"/>
+                            <constraint firstAttribute="trailing" secondItem="Hh8-Cm-wfw" secondAttribute="trailing" id="XPI-aD-Vzl"/>
+                            <constraint firstItem="Hh8-Cm-wfw" firstAttribute="top" secondItem="ij5-Ec-OgL" secondAttribute="bottom" id="bs6-wg-lsJ"/>
+                            <constraint firstItem="vGq-i4-xQz" firstAttribute="top" secondItem="Hh8-Cm-wfw" secondAttribute="bottom" id="f2x-VE-So0"/>
+                            <constraint firstItem="Hh8-Cm-wfw" firstAttribute="leading" secondItem="PrG-Td-VFe" secondAttribute="leading" id="iBu-MG-NRX"/>
                         </constraints>
                     </view>
                     <connections>

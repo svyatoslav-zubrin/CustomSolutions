@@ -12,14 +12,15 @@ protocol UniversalRefreshControlDelegate: class {
     func startedLoading(_ sender: UniversalRefreshControl)
 }
 
+/// Universal refresh control that can be used even with simple UIView. The component tested with UIScrollView only for now 😉
 class UniversalRefreshControl: UIView {
 
     weak var delegate: UniversalRefreshControlDelegate? = nil
 
     // views
-    weak var pan: UIPanGestureRecognizer! = nil
-    weak var refresh: FRYMoonActivityIndicator! = nil
-    weak var contentView: UIView! = nil
+    fileprivate weak var pan: UIPanGestureRecognizer! = nil
+    fileprivate weak var refresh: FRYMoonActivityIndicator! = nil
+    fileprivate weak var contentView: UIView! = nil
 
     private var _content: UIView? = nil
     var content: UIView? {
@@ -39,12 +40,6 @@ class UniversalRefreshControl: UIView {
             newContent.translatesAutoresizingMaskIntoConstraints = true
             newContent.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
-            // DEBUG
-            newContent.layer.borderColor = UIColor.green.cgColor
-            newContent.layer.borderWidth = 3
-            // END DEBUG
-
-
             contentView.addSubview(newContent)
             _content = newContent
         }
@@ -56,8 +51,9 @@ class UniversalRefreshControl: UIView {
     private var contentOffsetAtGestureStart: CGFloat = 0
 
     // refresh logic
-    static let limitToTriggerRefresh: CGFloat = 70;
-    private var topMarginAtLoadingTime: CGFloat = 50
+    private let moonSize: CGFloat = 50
+    private let limitToTriggerRefresh: CGFloat = 90;
+    private let topMarginAtLoadingTime: CGFloat = 70
 
     private enum RefreshState {
         case normal
@@ -134,7 +130,7 @@ class UniversalRefreshControl: UIView {
             default: break
             }
             
-            print("state set to: \(refreshState.string)")
+            //print("state set to: \(refreshState.string)")
         }
     }
 
@@ -182,6 +178,8 @@ class UniversalRefreshControl: UIView {
                             frame.origin = CGPoint(x: frame.origin.x, y: max(0, frame.origin.y + delta))
                             contentView.frame = frame
                             content.contentOffset = .zero
+
+                            refresh.alpha = contentView.frame.minY / limitToTriggerRefresh
                         }
                     }
 
@@ -192,38 +190,31 @@ class UniversalRefreshControl: UIView {
             // scroll down happend
             let shouldHandleScrollDown = topCellToContentViewDistance >= 0
             if shouldHandleScrollDown {
-                let limitedShift = max(0, min(160, delta))
+                let expectedShift = contentView.frame.origin.y + delta
+                let limitedShift = max(0, min(160, expectedShift))
                 var frame = contentView.frame
-                frame.origin = CGPoint(x: frame.origin.x, y: frame.origin.y + limitedShift)
+                frame.origin = CGPoint(x: frame.origin.x, y: contentOffsetAtGestureStart + limitedShift)
                 contentView.frame = frame
+
+                refresh.alpha = contentView.frame.minY / limitToTriggerRefresh
             }
 
             if refreshState == .normal {
                 if topCellToContentViewDistance > 0 {
-                    if topCellToContentViewDistance < UniversalRefreshControl.limitToTriggerRefresh {
+                    if topCellToContentViewDistance < limitToTriggerRefresh {
                         refreshState = .pullingBeforeLimitReached
                     } else {
                         refreshState = .pullingAfterLimitReached
                     }
                 }
-                
-                //currentValue = yOffset
             } else if refreshState == .pullingBeforeLimitReached {
-                if topCellToContentViewDistance >= UniversalRefreshControl.limitToTriggerRefresh {
+                if topCellToContentViewDistance >= limitToTriggerRefresh {
                     refreshState = .pullingAfterLimitReached
                 }
-                //currentValue = yOffset
             } else if refreshState == .pullingAfterLimitReached {
-                if topCellToContentViewDistance < UniversalRefreshControl.limitToTriggerRefresh {
+                if topCellToContentViewDistance < limitToTriggerRefresh {
                     refreshState = .pullingBeforeLimitReached
                 }
-                //currentValue = yOffset
-            } else if refreshState == .droppedBeforeLimitReached {
-                //currentValue = yOffset
-            } else if refreshState == .droppedAfterLimitReached {
-                //currentValue = yOffset
-            } else if refreshState == .loading {
-                // repetitive pull, ignore for now
             }
             
         case .ended, .cancelled:
@@ -237,9 +228,7 @@ class UniversalRefreshControl: UIView {
                     refreshState = .loadingAndScrolled
                 }
 
-                if let content = content as? UIScrollView {
-                    let _isScrolledAboveRefresh = (topMarginAtLoadingTime - content.contentOffset.y) > 0
-                    print("is scrolled above refresh: \(_isScrolledAboveRefresh) / \(isScrolledAboveRefresh)")
+                if let _ = content as? UIScrollView {
                     if isScrolledAboveRefresh {
                         reset()
                         break
@@ -251,9 +240,7 @@ class UniversalRefreshControl: UIView {
                     self.contentView.frame = frame
                 })
             } else if refreshState == .loadingAndScrolled {
-                if let content = content as? UIScrollView {
-                    let _isScrolledAboveRefresh = (topMarginAtLoadingTime - content.contentOffset.y) > 0
-                    print("is scrolled above refresh: \(_isScrolledAboveRefresh) / \(isScrolledAboveRefresh)")
+                if let _ = content as? UIScrollView {
                     if isScrolledAboveRefresh {
                         reset()
                         break
@@ -287,11 +274,6 @@ class UniversalRefreshControl: UIView {
     // MARK: Private
     
     private func setup() {
-
-        // self
-        layer.borderColor = UIColor.blue.cgColor
-        layer.borderWidth = 1
-        
         // views
         let cv = UIView(frame: bounds)
         cv.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -299,18 +281,12 @@ class UniversalRefreshControl: UIView {
         addSubview(cv)
         contentView = cv
 
-        // DEBUG
-        contentView.layer.borderColor = UIColor.red.cgColor
-        contentView.layer.borderWidth = 2
-        // END DEBUG
-
         var frame = CGRect(origin: .zero, size: CGSize(width: bounds.size.width, height: topMarginAtLoadingTime))
         let refreshContainer = UIView(frame: frame)
         refreshContainer.autoresizingMask = [.flexibleBottomMargin, .flexibleWidth]
         addSubview(refreshContainer)
         sendSubview(toBack: refreshContainer)
 
-        let moonSize: CGFloat = 30
         frame = CGRect(x: (bounds.size.width - moonSize) / 2,
                        y: (topMarginAtLoadingTime - moonSize) / 2,
                        width: moonSize,
@@ -332,20 +308,20 @@ class UniversalRefreshControl: UIView {
         gestureShift = 0
     }
 
-    var isScrolledAboveRefresh: Bool {
+    private var isScrolledAboveRefresh: Bool {
         guard refreshState == .loading || refreshState == .loadingAndScrolled else {
             return false
         }
 
         if let _ = content as? UIScrollView {
-            // TODO: is that correct, shouldn't we take into account contentOffset of the scroll?s
+            // TODO: is that correct, shouldn't we take into account contentOffset of the scroll?
             return contentView.frame.minY < topMarginAtLoadingTime
         } else {
             return contentView.frame.minY < topMarginAtLoadingTime
         }
     }
 
-    var isScrolledBelowRefresh: Bool {
+    private var isScrolledBelowRefresh: Bool {
         guard refreshState == .loading || refreshState == .loadingAndScrolled else {
             return false
         }
