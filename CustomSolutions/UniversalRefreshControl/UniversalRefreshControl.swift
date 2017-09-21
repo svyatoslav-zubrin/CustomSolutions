@@ -13,13 +13,13 @@ class UniversalRefreshControl: UIView {
     // views
     weak var pan: UIPanGestureRecognizer! = nil
     weak var contentView: UIView! = nil
-    weak var refresh: UIView! = nil
+    weak var refresh: FRYMoonActivityIndicator! = nil
     
     // internal helpers
     private var gestureShift: CGFloat = 0
 
     // refresh logic
-    static let limitToTriggerRefresh: CGFloat = 80;
+    static let limitToTriggerRefresh: CGFloat = 70;
     private var topMarginAtLoadingTime: CGFloat = 50
 
     private enum RefreshState {
@@ -45,7 +45,7 @@ class UniversalRefreshControl: UIView {
         didSet {
             switch refreshState {
             case .normal:
-                //refresh.stopAnimation()
+                refresh.animating = false
                 // animate back
                 UIView.animate(withDuration: 0.3, animations: { [unowned self] in
                     var frame = self.contentView.frame
@@ -80,7 +80,7 @@ class UniversalRefreshControl: UIView {
                         self.refreshState = .normal
                     })
                 })
-                //refresh.startAnimation()
+                refresh.animating = true
                 
             default: break
             }
@@ -201,6 +201,23 @@ class UniversalRefreshControl: UIView {
         addSubview(cv)
         contentView = cv
         
+        var frame = CGRect(origin: .zero, size: CGSize(width: bounds.size.width, height: topMarginAtLoadingTime))
+        let refreshContainer = UIView(frame: frame)
+        refreshContainer.autoresizingMask = [.flexibleBottomMargin]
+        addSubview(refreshContainer)
+        sendSubview(toBack: refreshContainer)
+
+        let moonSize: CGFloat = 30
+        frame = CGRect(x: (bounds.size.width - moonSize) / 2,
+                       y: (topMarginAtLoadingTime - moonSize) / 2,
+                       width: moonSize,
+                       height: moonSize)
+
+        let mai = FRYMoonActivityIndicator(frame: frame)
+        mai.autoresizingMask = [.flexibleBottomMargin, .flexibleTopMargin, .flexibleLeftMargin, .flexibleRightMargin]
+        refreshContainer.addSubview(mai)
+        refresh = mai
+
         // gestures
         let p = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)));
         addGestureRecognizer(p)
