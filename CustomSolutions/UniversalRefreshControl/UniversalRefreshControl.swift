@@ -8,15 +8,52 @@
 
 import UIKit
 
+protocol UniversalRefreshControlDelegate: class {
+    func startedLoading(_ sender: UniversalRefreshControl)
+}
+
 class UniversalRefreshControl: UIView {
-    
+
+    weak var delegate: UniversalRefreshControlDelegate? = nil
+
     // views
     weak var pan: UIPanGestureRecognizer! = nil
-    weak var contentView: UIView! = nil
     weak var refresh: FRYMoonActivityIndicator! = nil
-    
+    weak var contentView: UIView! = nil
+
+    private var _content: UIView? = nil
+    var content: UIView? {
+        get {
+            return _content
+        }
+        set {
+            guard let newContent = newValue else {
+                _content?.removeFromSuperview()
+                _content = nil
+                return
+            }
+
+            _content?.removeFromSuperview()
+
+            newContent.frame = contentView.bounds
+            newContent.translatesAutoresizingMaskIntoConstraints = true
+            newContent.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+            // DEBUG
+            newContent.layer.borderColor = UIColor.green.cgColor
+            newContent.layer.borderWidth = 3
+            // END DEBUG
+
+
+            contentView.addSubview(newContent)
+            _content = newContent
+        }
+    }
+
+
     // internal helpers
     private var gestureShift: CGFloat = 0
+    private var contentOffsetAtGestureStart: CGFloat = 0
 
     // refresh logic
     static let limitToTriggerRefresh: CGFloat = 70;
@@ -29,6 +66,7 @@ class UniversalRefreshControl: UIView {
         case droppedBeforeLimitReached
         case droppedAfterLimitReached
         case loading
+        case loadingAndScrolled
         
         var string: String {
             switch self {
@@ -38,6 +76,7 @@ class UniversalRefreshControl: UIView {
             case .droppedBeforeLimitReached: return "droppedBefore"
             case .droppedAfterLimitReached: return "droppedAfter"
             case .loading: return "loading"
+            case .loadingAndScrolled: return "loadingAndScrolled"
             }
         }
     }
@@ -46,6 +85,8 @@ class UniversalRefreshControl: UIView {
             switch refreshState {
             case .normal:
                 refresh.animating = false
+                pan.isEnabled = false
+                pan.isEnabled = true
                 // animate back
                 UIView.animate(withDuration: 0.3, animations: { [unowned self] in
                     var frame = self.contentView.frame
@@ -76,12 +117,20 @@ class UniversalRefreshControl: UIView {
                     frame.origin = CGPoint(x: frame.origin.x, y: self.topMarginAtLoadingTime)
                     self.contentView.frame = frame
                 }, completion: { [unowned self] _ in
-                    DispatchQueue.main.asyncAfter(deadline: .now()+5, execute: {
-                        self.refreshState = .normal
-                    })
+                    self.delegate?.startedLoading(self)
                 })
                 refresh.animating = true
-                
+
+            case .loadingAndScrolled:
+                guard isScrolledBelowRefresh else {
+                    break
+                }
+                UIView.animate(withDuration: 0.3, animations: { [unowned self] in
+                    var frame = self.contentView.frame
+                    frame.origin = CGPoint(x: frame.origin.x, y: self.topMarginAtLoadingTime)
+                    self.contentView.frame = frame
+                })
+
             default: break
             }
             
@@ -106,37 +155,66 @@ class UniversalRefreshControl: UIView {
     // MARK: User actions
     
     func handlePan(_ gesture: UIPanGestureRecognizer) {
-        
         switch gesture.state {
-        case .began, .changed:
-            
-            let shift = gesture.translation(in: self).y
-            guard shift >= 0 else {
-                break
+        case .began:
+            if let content = content as? UIScrollView {
+                contentOffsetAtGestureStart = content.contentOffset.y
             }
-            
-            let wShift = shiftForDelta(shift)
-            let delta = wShift - gestureShift
-            gestureShift = wShift
-            var frame = contentView.frame
-            frame.origin = CGPoint(x: frame.origin.x, y: frame.origin.y + delta)
-            contentView.frame = frame
-            
+            fallthrough
+
+        case .changed:
+            let shift = gesture.translation(in: self).y
+            let delta = shift - gestureShift
+            gestureShift = shift
+
+            var topCellToContentViewDistance = contentView.frame.minY
+            if let content = content as? UIScrollView {
+                topCellToContentViewDistance -= content.contentOffset.y
+            }
+
+            // scroll up happend
+            if delta < 0 {
+                let shouldHandleScrollUp = topCellToContentViewDistance > 0
+                if shouldHandleScrollUp {
+                    if contentView.frame.minY > 0 {
+                        if let content = content as? UIScrollView {
+                            var frame = contentView.frame
+                            frame.origin = CGPoint(x: frame.origin.x, y: max(0, frame.origin.y + delta))
+                            contentView.frame = frame
+                            content.contentOffset = .zero
+                        }
+                    }
+
+                    break
+                }
+            }
+
+            // scroll down happend
+            let shouldHandleScrollDown = topCellToContentViewDistance >= 0
+            if shouldHandleScrollDown {
+                let limitedShift = max(0, min(160, delta))
+                var frame = contentView.frame
+                frame.origin = CGPoint(x: frame.origin.x, y: frame.origin.y + limitedShift)
+                contentView.frame = frame
+            }
+
             if refreshState == .normal {
-                if gestureShift < UniversalRefreshControl.limitToTriggerRefresh {
-                    refreshState = .pullingBeforeLimitReached
-                } else {
-                    refreshState = .pullingAfterLimitReached
+                if topCellToContentViewDistance > 0 {
+                    if topCellToContentViewDistance < UniversalRefreshControl.limitToTriggerRefresh {
+                        refreshState = .pullingBeforeLimitReached
+                    } else {
+                        refreshState = .pullingAfterLimitReached
+                    }
                 }
                 
                 //currentValue = yOffset
             } else if refreshState == .pullingBeforeLimitReached {
-                if gestureShift >= UniversalRefreshControl.limitToTriggerRefresh {
+                if topCellToContentViewDistance >= UniversalRefreshControl.limitToTriggerRefresh {
                     refreshState = .pullingAfterLimitReached
                 }
                 //currentValue = yOffset
             } else if refreshState == .pullingAfterLimitReached {
-                if gestureShift < UniversalRefreshControl.limitToTriggerRefresh {
+                if topCellToContentViewDistance < UniversalRefreshControl.limitToTriggerRefresh {
                     refreshState = .pullingBeforeLimitReached
                 }
                 //currentValue = yOffset
@@ -151,11 +229,41 @@ class UniversalRefreshControl: UIView {
         case .ended, .cancelled:
             if refreshState == .pullingAfterLimitReached {
                 refreshState = .droppedAfterLimitReached
-                //sendActions(for: .valueChanged)
             } else if refreshState == .pullingBeforeLimitReached {
                 refreshState = .droppedBeforeLimitReached
             } else if refreshState == .loading {
-                // repetitive pull, ignore for now
+
+                if contentView.frame.minY != topMarginAtLoadingTime {
+                    refreshState = .loadingAndScrolled
+                }
+
+                if let content = content as? UIScrollView {
+                    let _isScrolledAboveRefresh = (topMarginAtLoadingTime - content.contentOffset.y) > 0
+                    print("is scrolled above refresh: \(_isScrolledAboveRefresh) / \(isScrolledAboveRefresh)")
+                    if isScrolledAboveRefresh {
+                        reset()
+                        break
+                    }
+                }
+                UIView.animate(withDuration: 0.3, animations: { [unowned self] in
+                    var frame = self.contentView.frame
+                    frame.origin = CGPoint(x: frame.origin.x, y: self.topMarginAtLoadingTime)
+                    self.contentView.frame = frame
+                })
+            } else if refreshState == .loadingAndScrolled {
+                if let content = content as? UIScrollView {
+                    let _isScrolledAboveRefresh = (topMarginAtLoadingTime - content.contentOffset.y) > 0
+                    print("is scrolled above refresh: \(_isScrolledAboveRefresh) / \(isScrolledAboveRefresh)")
+                    if isScrolledAboveRefresh {
+                        reset()
+                        break
+                    }
+                }
+                UIView.animate(withDuration: 0.3, animations: { [unowned self] in
+                    var frame = self.contentView.frame
+                    frame.origin = CGPoint(x: frame.origin.x, y: self.topMarginAtLoadingTime)
+                    self.contentView.frame = frame
+                })
             }
             reset()
             
@@ -165,31 +273,21 @@ class UniversalRefreshControl: UIView {
         default: break
         }
     }
-    
-    // MARK: Math
-    
-    private func shiftForDelta(_ delta: CGFloat) -> CGFloat {
-        if delta <= 0 {
-            return 0
-        } else if delta > 160 {
-            return 100
-        } else {
-            let c0: CGFloat =  1.3737447856830951e+000
-            let c1: CGFloat =  7.6879472420430739e-001
-            let c2: CGFloat =  2.8697969370004082e-003
-            let c3: CGFloat = -3.5206414956983544e-005
-            let c4: CGFloat =  7.0853953049069964e-008
-            return c0
-                 + c1 * pow(delta, 1)
-                 + c2 * pow(delta, 2)
-                 + c3 * pow(delta, 3)
-                 + c4 * pow(delta, 4)
+
+    // MARK: Public
+
+    func finish() {
+        guard refreshState == .loading || refreshState == .loadingAndScrolled else {
+            return
         }
+
+        refreshState = .normal
     }
     
     // MARK: Private
     
     private func setup() {
+
         // self
         layer.borderColor = UIColor.blue.cgColor
         layer.borderWidth = 1
@@ -200,10 +298,15 @@ class UniversalRefreshControl: UIView {
         cv.backgroundColor = .yellow
         addSubview(cv)
         contentView = cv
-        
+
+        // DEBUG
+        contentView.layer.borderColor = UIColor.red.cgColor
+        contentView.layer.borderWidth = 2
+        // END DEBUG
+
         var frame = CGRect(origin: .zero, size: CGSize(width: bounds.size.width, height: topMarginAtLoadingTime))
         let refreshContainer = UIView(frame: frame)
-        refreshContainer.autoresizingMask = [.flexibleBottomMargin]
+        refreshContainer.autoresizingMask = [.flexibleBottomMargin, .flexibleWidth]
         addSubview(refreshContainer)
         sendSubview(toBack: refreshContainer)
 
@@ -220,10 +323,64 @@ class UniversalRefreshControl: UIView {
 
         // gestures
         let p = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)));
+        p.delegate = self
         addGestureRecognizer(p)
+        pan = p
     }
     
     private func reset() {
         gestureShift = 0
+    }
+
+    var isScrolledAboveRefresh: Bool {
+        guard refreshState == .loading || refreshState == .loadingAndScrolled else {
+            return false
+        }
+
+        if let _ = content as? UIScrollView {
+            // TODO: is that correct, shouldn't we take into account contentOffset of the scroll?s
+            return contentView.frame.minY < topMarginAtLoadingTime
+        } else {
+            return contentView.frame.minY < topMarginAtLoadingTime
+        }
+    }
+
+    var isScrolledBelowRefresh: Bool {
+        guard refreshState == .loading || refreshState == .loadingAndScrolled else {
+            return false
+        }
+
+        if let _ = content as? UIScrollView {
+            // TODO: is that correct, shouldn't we take into account contentOffset of the scroll?s
+            return contentView.frame.minY > topMarginAtLoadingTime
+        } else {
+            return contentView.frame.minY > topMarginAtLoadingTime
+        }
+    }
+
+}
+
+extension UniversalRefreshControl: UIGestureRecognizerDelegate {
+
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard pan == gestureRecognizer else {
+            return false
+        }
+
+        if let content = content as? UIScrollView, content.contentOffset.y > 0 {
+            return false
+        }
+
+        let should = contentView.frame.minY > 0 || (contentView.frame.minY == 0 && pan.translation(in: self).y > 0)
+        return should
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let content = content as? UIScrollView else {
+            return false
+        }
+
+        return otherGestureRecognizer == content.panGestureRecognizer
     }
 }
